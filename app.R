@@ -8,42 +8,90 @@
 #
 
 library(shiny)
+library(shinydashboard)
 
-# Define UI for application that draws a histogram
-ui <- fluidPage(
+importedData <- read.csv(url("https://docs.google.com/spreadsheets/d/1mKubRkZh3xFE9iBhnohvLqDLldT194mz0M29yxWzK2k/export?format=csv"))
+#importedData <- read.csv("local.csv")
+num=nrow(importedData)
 
-    # Application title
-    titlePanel("Old Faithful Geyser Data"),
+#write.csv(importedData,"local.csv")
 
-    # Sidebar with a slider input for number of bins 
-    sidebarLayout(
-        sidebarPanel(
-            sliderInput("bins",
-                        "Number of bins:",
-                        min = 1,
-                        max = 50,
-                        value = 30)
-        ),
+tr <- function(name) return(paste("TR:", name))
 
-        # Show a plot of the generated distribution
-        mainPanel(
-           plotOutput("distPlot")
-        )
+ui<-dashboardPage(title="Hola",skin="red",
+    dashboardHeader(title="Semestral QM230-S-2021",
+         dropdownMenu(type="messages",
+                      messageItem(from="Pedro","Inicio del Examen"),
+                      messageItem(from="Pedro","Fin del Examen")
+                      ),
+         dropdownMenu(type="notifications",
+                      notificationItem(text="debes iniciar tu examen"),
+                      notificationItem(text="finalizar tu examen en 3 min")
+                      ),
+         dropdownMenu(type="tasks",
+                      taskItem(value=50, text="Avance del examen",color="red"),
+                      taskItem(value=20, text="Avance del examen",color="blue"),
+                      taskItem(value=5, text="Avance del examen",color="green")
+                      )
+    ),
+    dashboardSidebar(
+      sidebarSearchForm("searchText","buttonSearch","buscar",icon=shiny::icon("apple")),
+      sidebarMenu(id="sidebarID",
+            menuItem("Primera Ventana"),
+            menuItem("Segunda sub-ventana",id="chartsID",
+                 menuSubItem("Sub-Ventana1"),
+                 menuSubItem("Sub-Ventana2"),
+                 menuSubItem("Sub-Ventana3")
+                     )
+                  )
+      
+    ),
+    dashboardBody(
+      fluidRow(
+        # A static infoBox
+        infoBox("New Orders", 10 * 2, icon = icon("credit-card")),
+        # Dynamic infoBoxes
+        infoBoxOutput("progressBox"),
+        infoBoxOutput("approvalBox")
+         ),
+         
+      fluidRow(
+        uiOutput("radio"),
+        textOutput("txt"),
+        actionButton("submit", "Submit", class = "btn-primary")
+        
+      ),
+
     )
 )
 
-# Define server logic required to draw a histogram
-server <- function(input, output) {
+server<-function(input,output){
+  n=sample(1:num,1)
+  output$progressBox <- renderInfoBox({
+    infoBox(
+      "Progress", paste0(n, " - ", num), icon = icon("list"),
+      color = "purple"
+    )
 
-    output$distPlot <- renderPlot({
-        # generate bins based on input$bins from ui.R
-        x    <- faithful[, 2]
-        bins <- seq(min(x), max(x), length.out = input$bins + 1)
-
-        # draw the histogram with the specified number of bins
-        hist(x, breaks = bins, col = 'darkgray', border = 'white')
-    })
+  })
+  output$txt <- renderText({
+    paste("Pregunta:", importedData[n,2])
+  })
+  
+  output$radio <- renderUI({
+    opt <- c("Normal" = "norm",
+             "Uniform" = "unif",
+             "Log-normal" = "lnorm",
+             "Exponential" = "exp"
+                )
+    s=sample(3:6)
+    names(opt) <- importedData[n,s]
+    label <-  tr("Distribution type:")
+    
+    radioButtons("dist", label, opt)
+  })  
+  
+ 
 }
 
-# Run the application 
 shinyApp(ui = ui, server = server)
